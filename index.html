@@ -3,62 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vesmírný Terminál - Kalibrace</title>
+    <title>Vesmírný Terminál - Ultra Pro</title>
     <style>
+        * { box-sizing: border-box; }
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             background: radial-gradient(circle at center, #1b2735 0%, #090a0f 100%);
             overflow: hidden; font-family: 'Courier New', Courier, monospace;
         }
-
-        .space {
-            position: relative; width: 100vw; height: 100vh;
-            display: flex; justify-content: center; align-items: center;
-        }
-
-        /* --- SLUNCE --- */
+        .space { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; z-index: 1; }
+        #star-field { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        
         #sun {
-            position: absolute;
-            width: 150px;
-            height: 150px;
+            position: absolute; width: 150px; height: 150px;
             background: radial-gradient(circle, #fff5e6 0%, #ffcc00 50%, #ff6600 100%);
-            border-radius: 50%;
-            z-index: 5;
-            box-shadow: 0 0 60px #ffcc00, 0 0 120px #ff6600;
-            transition: all 1s ease-in-out, opacity 1.5s ease-out; 
-            animation: sunPulse 4s infinite ease-in-out;
-            opacity: 0;
-            pointer-events: none;
+            border-radius: 50%; z-index: 5; box-shadow: 0 0 60px #ffcc00, 0 0 120px #ff6600;
+            transition: all 1s ease-in-out, opacity 1.5s ease-out; animation: sunPulse 4s infinite ease-in-out;
+            opacity: 0; pointer-events: none;
         }
+        @keyframes sunPulse { 0%, 100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.05); filter: brightness(1.2); } }
 
-        @keyframes sunPulse {
-            0%, 100% { transform: scale(1); filter: brightness(1); }
-            50% { transform: scale(1.05); filter: brightness(1.2); }
-        }
-
-        /* --- PANELY --- */
         #console-container, #help-panel {
-            position: fixed;
-            background: rgba(0, 0, 0, 0.85);
-            border: 1px solid #00ff00;
-            border-radius: 5px;
-            z-index: 999;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            position: fixed; background: rgba(0, 0, 0, 0.9); border: 0.1vw solid #00ff00;
+            border-radius: 0.4vw; z-index: 9999; box-shadow: 0 0 1.5vw rgba(0, 255, 0, 0.2);
         }
-
-        #console-container { bottom: 20px; left: 20px; width: 320px; padding: 15px; }
-        #help-panel { top: 20px; right: 20px; width: 260px; padding: 10px; color: #00ff00; font-size: 12px; }
-        #help-panel h3 { margin: 0 0 10px 0; font-size: 14px; text-decoration: underline; text-align: center; }
-        #help-panel ul { list-style: none; padding: 0; margin: 0; }
+        #console-container { bottom: 2vh; left: 2vw; width: 25vw; min-width: 300px; padding: 15px; }
+        #help-panel { top: 2vh; right: 2vw; width: 18vw; min-width: 240px; padding: 15px; color: #00ff00; }
+        
+        #help-panel h3 { margin: 0 0 10px 0; font-size: 1vw; min-font-size: 14px; text-decoration: underline; text-align: center; }
+        #help-panel ul { list-style: none; padding: 0; margin: 0; font-size: 0.8vw; }
         #help-panel li { margin-bottom: 5px; }
         .cmd-name { font-weight: bold; color: #fff; }
 
-        #history { height: 120px; overflow-y: auto; color: #00ff00; font-size: 12px; margin-bottom: 10px; scrollbar-width: none; }
+        #history { height: 15vh; overflow-y: auto; color: #00ff00; font-size: 0.8vw; margin-bottom: 10px; scrollbar-width: none; }
         #history::-webkit-scrollbar { display: none; }
+        
+        .input-line { display: flex; color: #00ff00; font-size: 0.9vw; border-top: 1px solid rgba(0, 255, 0, 0.2); padding-top: 10px; }
+        #cmd-input { background: transparent; border: none; color: #00ff00; outline: none; flex-grow: 1; font-family: inherit; margin-left: 10px; font-size: 0.9vw; }
 
-        .input-line { display: flex; color: #00ff00; font-size: 14px; border-top: 1px solid rgba(0, 255, 0, 0.2); padding-top: 5px; }
-        #cmd-input { background: transparent; border: none; color: #00ff00; outline: none; flex-grow: 1; font-family: inherit; margin-left: 8px; }
-
+        .log-error { color: #ff3333; font-weight: bold; }
         .star { position: absolute; background: white; border-radius: 50%; opacity: 0; animation: twinkle var(--duration) infinite ease-in-out; }
         @keyframes twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
         .nebula { position: absolute; width: 80vmax; height: 80vmax; background: radial-gradient(circle, rgba(100, 50, 255, 0.1) 0%, transparent 60%); z-index: 1; pointer-events: none; }
@@ -66,25 +49,27 @@
 </head>
 <body>
 
-    <div class="space" id="universe">
+    <div class="space">
+        <div id="star-field"></div>
         <div class="nebula"></div>
         <div id="sun"></div>
     </div>
     
     <div id="help-panel">
-        <h3>DOSTUPNÉ PŘÍKAZY</h3>
+        <h3>SYSTÉMOVÉ PŘÍKAZY</h3>
         <ul>
-            <li><span class="cmd-name">add sun</span> - Vytvoří hvězdu</li>
-            <li><span class="cmd-name">grow / shrink</span> - Změna velikosti</li>
-            <li><span class="cmd-name">color [barva]</span> - Změna barvy</li>
-            <li><span class="cmd-name">reset sun</span> - Reset jen pro slunce</li>
-            <li><span class="cmd-name">reset</span> - Kompletní restart</li>
-            <li><span class="cmd-name">clear</span> - Vyčistí konzoli</li>
+            <li><span class="cmd-name">add sun</span></li>
+            <li><span class="cmd-name">grow</span></li>
+            <li><span class="cmd-name">shrink</span></li>
+            <li><span class="cmd-name">color</span></li>
+            <li><span class="cmd-name">reset sun</span></li>
+            <li><span class="cmd-name">reset</span></li>
+            <li><span class="cmd-name">clear</span></li>
         </ul>
     </div>
 
     <div id="console-container">
-        <div id="history">SYSTEM READY...</div>
+        <div id="history"></div>
         <div class="input-line">
             <span>></span>
             <input type="text" id="cmd-input" autofocus autocomplete="off">
@@ -94,16 +79,33 @@
     <script>
         const sun = document.getElementById('sun');
         const input = document.getElementById('cmd-input');
-        const history = document.getElementById('history');
+        const historyDiv = document.getElementById('history');
+        const starField = document.getElementById('star-field');
+        
         let currentSize = 150;
         let sunExists = false;
+        let commandHistory = [];
+        let historyIndex = -1;
 
-        function log(text) {
+        // Smart Tab Variables
+        const availableCommands = ["add sun", "clear", "color", "grow", "reset", "reset sun", "shrink"];
+        let lastTabPrefix = "";
+        let tabMatches = [];
+        let tabMatchIndex = 0;
+
+        async function log(text, isError = false) {
             const entry = document.createElement('div');
-            entry.innerHTML = `> ${text}`;
-            history.appendChild(entry);
-            history.scrollTop = history.scrollHeight;
+            if (isError) entry.className = 'log-error';
+            entry.innerHTML = "> ";
+            historyDiv.appendChild(entry);
+            for (let i = 0; i < text.length; i++) {
+                entry.innerHTML += text.charAt(i);
+                historyDiv.scrollTop = historyDiv.scrollHeight;
+                await new Promise(resolve => setTimeout(resolve, 20));
+            }
         }
+
+        log("Space Terminal");
 
         function resetSunProps() {
             currentSize = 150;
@@ -113,63 +115,114 @@
             sun.style.boxShadow = '0 0 60px #ffcc00, 0 0 120px #ff6600';
         }
 
-        input.addEventListener('keydown', (e) => {
+        input.addEventListener('keydown', async (e) => {
+            // SMART TAB COMPLETION
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const val = input.value.toLowerCase();
+                
+                // Pokud uživatel pokračuje v mačkání Tabu na stejný prefix
+                if (val !== "" && (val === lastTabPrefix || tabMatches.includes(val))) {
+                    if (tabMatches.length > 1) {
+                        tabMatchIndex = (tabMatchIndex + 1) % tabMatches.length;
+                        input.value = tabMatches[tabMatchIndex];
+                        return;
+                    }
+                }
+
+                // Nové hledání shod
+                if (val !== "") {
+                    lastTabPrefix = val;
+                    tabMatches = availableCommands.filter(c => c.startsWith(val));
+                    
+                    if (tabMatches.length > 0) {
+                        tabMatchIndex = 0;
+                        input.value = tabMatches[tabMatchIndex];
+                    }
+                }
+                return;
+            }
+
+            // Reset Tab stavu při psaní čehokoliv jiného
+            if (e.key !== 'Tab') {
+                lastTabPrefix = "";
+                tabMatches = [];
+            }
+
             if (e.key === 'Enter') {
-                const fullCmd = input.value.toLowerCase().trim();
-                const parts = fullCmd.split(' ');
+                const fullCmd = input.value.trim();
+                if (fullCmd === "") return;
+
+                commandHistory.push(fullCmd);
+                historyIndex = commandHistory.length;
+                input.value = '';
+                
+                const cmdLower = fullCmd.toLowerCase();
+                const parts = cmdLower.split(' ');
                 const cmd = parts[0];
                 const arg = parts[1];
 
-                if (fullCmd === 'add sun') {
-                    if (!sunExists) {
-                        sun.style.opacity = "1";
-                        sunExists = true;
-                        log('Hvězda aktivována.');
-                    } else { log('Slunce již září.'); }
+                if (cmdLower === 'add sun') {
+                    sun.style.opacity = "1";
+                    sunExists = true;
+                    await log('Hvězdné jádro inicializováno.');
                 } 
-                else if (fullCmd === 'reset sun') {
+                else if (cmdLower === 'reset sun') {
                     if (sunExists) {
                         resetSunProps();
-                        log('Parametry slunce resetovány.');
-                    } else { log('Chyba: Není co resetovat.'); }
+                        await log('Parametry hvězdy byly rekalibrovány.');
+                    } else { await log('Chyba: Nebyla detekována žádná aktivní hvězda.', true); }
                 }
-                else if (fullCmd === 'reset') {
+                else if (cmdLower === 'reset') {
                     sunExists = false;
                     sun.style.opacity = "0";
-                    setTimeout(resetSunProps, 1500);
-                    log('Systém kompletně restartován.');
+                    setTimeout(resetSunProps, 1000);
+                    await log('Provádím totální restart systému...');
                 }
-                else if (cmd === 'clear') {
-                    history.innerHTML = '';
+                else if (cmdLower === 'clear') {
+                    historyDiv.innerHTML = '';
                 }
                 else if (sunExists) {
                     if (cmd === 'grow') {
                         currentSize += 50;
                         sun.style.width = `${currentSize}px`;
                         sun.style.height = `${currentSize}px`;
-                        log(`Velikost: ${currentSize}px`);
-                    } 
-                    else if (cmd === 'shrink') {
+                        await log(`Expanze jádra na ${currentSize}px.`);
+                    } else if (cmd === 'shrink') {
                         currentSize = Math.max(20, currentSize - 50);
                         sun.style.width = `${currentSize}px`;
                         sun.style.height = `${currentSize}px`;
-                        log(`Velikost: ${currentSize}px`);
-                    }
-                    else if (cmd === 'color' && arg) {
+                        await log(`Komprese jádra na ${currentSize}px.`);
+                    } else if (cmd === 'color' && arg) {
                         sun.style.background = arg;
                         sun.style.boxShadow = `0 0 60px ${arg}, 0 0 120px ${arg}`;
-                        log(`Barva: ${arg}`);
+                        await log(`Spektrální analýza dokončena. Barva: ${arg}`);
+                    } else {
+                        await log(`Kritická chyba: Příkaz '${cmd}' neexistuje.`, true);
                     }
-                    else { log('Neznámý příkaz.'); }
                 } else {
-                    log('Chyba: Systém vyžaduje "add sun".');
+                    await log('Přístup odepřen. Nejprve inicializujte hvězdu (add sun).', true);
                 }
-                input.value = '';
+            } 
+            else if (e.key === 'ArrowUp') {
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    input.value = commandHistory[historyIndex];
+                }
+                e.preventDefault();
+            } 
+            else if (e.key === 'ArrowDown') {
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    input.value = commandHistory[historyIndex];
+                } else {
+                    historyIndex = commandHistory.length;
+                    input.value = "";
+                }
+                e.preventDefault();
             }
         });
 
-        // Hvězdné pozadí
-        const universe = document.getElementById('universe');
         for (let i = 0; i < 400; i++) {
             const star = document.createElement('div');
             star.className = 'star';
@@ -179,7 +232,7 @@
             star.style.width = `${size}px`;
             star.style.height = `${size}px`;
             star.style.setProperty('--duration', `${2 + Math.random() * 4}s`);
-            universe.appendChild(star);
+            starField.appendChild(star);
         }
     </script>
 </body>
