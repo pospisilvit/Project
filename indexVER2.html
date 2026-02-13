@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vesmírný Terminál - Bezpečné Orbity</title>
+    <style>
+        * { box-sizing: border-box; }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #1b2735 0%, #090a0f 100%);
+            overflow: hidden; font-family: 'Courier New', Courier, monospace;
+        }
+        .space { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; z-index: 1; }
+        #star-field { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        
+        #sun {
+            position: absolute; width: 120px; height: 120px;
+            background: radial-gradient(circle, #fff5e6 0%, #ffcc00 50%, #ff6600 100%);
+            border-radius: 50%; z-index: 10; box-shadow: 0 0 60px #ffcc00, 0 0 120px #ff6600;
+            transition: all 1s ease-in-out, opacity 1.5s ease-out; animation: sunPulse 4s infinite ease-in-out;
+            opacity: 0; pointer-events: none;
+        }
+
+        /* --- ORBITY A PLANETY --- */
+        .orbit-ring {
+            position: absolute;
+            top: 50%; left: 50%;
+            border: 1px solid rgba(0, 255, 0, 0.15); /* Jemná čára dráhy */
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 4;
+            animation: rotate var(--speed) linear infinite;
+        }
+        .planet {
+            position: absolute;
+            top: 0; left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            box-shadow: inset -5px -5px 10px rgba(0,0,0,0.6);
+        }
+
+        @keyframes rotate { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+        @keyframes sunPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+        /* Konzole a Panely */
+        #console-container, #help-panel {
+            position: fixed; background: rgba(0, 0, 0, 0.9); border: 0.1vw solid #00ff00;
+            border-radius: 0.4vw; z-index: 9999; box-shadow: 0 0 1.5vw rgba(0, 255, 0, 0.2);
+        }
+        #console-container { bottom: 2vh; left: 2vw; width: 25vw; min-width: 300px; padding: 15px; }
+        #help-panel { top: 2vh; right: 2vw; width: 18vw; min-width: 240px; padding: 15px; color: #00ff00; }
+        #help-panel h3 { margin: 0 0 10px 0; font-size: 1vw; text-decoration: underline; text-align: center; }
+        #help-panel ul { list-style: none; padding: 0; margin: 0; font-size: 0.8vw; }
+        #history { height: 15vh; overflow-y: auto; color: #00ff00; font-size: 0.8vw; margin-bottom: 10px; scrollbar-width: none; }
+        .input-line { display: flex; color: #00ff00; font-size: 0.9vw; border-top: 1px solid rgba(0, 255, 0, 0.2); padding-top: 10px; }
+        #cmd-input { background: transparent; border: none; color: #00ff00; outline: none; flex-grow: 1; font-family: inherit; margin-left: 10px; font-size: 0.9vw; }
+        .log-error { color: #ff3333; font-weight: bold; }
+        .star { position: absolute; background: white; border-radius: 50%; opacity: 0; animation: twinkle var(--duration) infinite ease-in-out; }
+        @keyframes twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="space" id="universe">
+        <div id="star-field"></div>
+        <div id="sun"></div>
+    </div>
+    
+    <div id="help-panel">
+        <h3>SYSTÉMOVÉ PŘÍKAZY</h3>
+        <ul>
+            <li><span class="cmd-name">add sun</span> - Inicializace</li>
+            <li><span class="cmd-name">add planet [barva]</span> - Bezpečná orbita</li>
+            <li><span class="cmd-name">reset</span> - Vymazat systém</li>
+            <li><span class="cmd-name">clear</span> - Vymazat logy</li>
+        </ul>
+    </div>
+
+    <div id="console-container">
+        <div id="history"></div>
+        <div class="input-line">
+            <span>></span>
+            <input type="text" id="cmd-input" autofocus autocomplete="off">
+        </div>
+    </div>
+
+    <script>
+        const sun = document.getElementById('sun');
+        const input = document.getElementById('cmd-input');
+        const historyDiv = document.getElementById('history');
+        const universe = document.getElementById('universe');
+        const starField = document.getElementById('star-field');
+        
+        let sunExists = false;
+        let commandHistory = [];
+        let historyIndex = -1;
+        const availableCommands = ["add sun", "add planet", "clear", "reset"];
+
+        // SPRÁVA ORBIT (ZAMEZENÍ KOLIZÍ)
+        let occupiedOrbits = []; 
+        const orbitStep = 45; // Minimální mezera mezi orbitami v pixelech
+
+        async function log(text, isError = false) {
+            const entry = document.createElement('div');
+            if (isError) entry.className = 'log-error';
+            entry.innerHTML = "> ";
+            historyDiv.appendChild(entry);
+            for (let i = 0; i < text.length; i++) {
+                entry.innerHTML += text.charAt(i);
+                historyDiv.scrollTop = historyDiv.scrollHeight;
+                await new Promise(resolve => setTimeout(resolve, 20));
+            }
+        }
+
+        log("COLLISION AVOIDANCE SYSTEM ACTIVE.");
+
+        function createPlanet(color = 'royalblue') {
+            // Najdeme první volnou orbitu (začínáme 100px od Slunce)
+            let distance = 100 + (occupiedOrbits.length * orbitStep);
+            
+            // Limit, aby planety neutekly z obrazovky
+            if (distance > window.innerWidth / 2.2) {
+                log("CHYBA: Sektor je přeplněn.", true);
+                return;
+            }
+
+            occupiedOrbits.push(distance);
+
+            const orbitRing = document.createElement('div');
+            orbitRing.className = 'orbit-ring';
+            
+            const speed = 8 + (distance / 40); // Čím dál, tím pomaleji obíhá (fyzika!)
+
+            orbitRing.style.width = `${distance * 2}px`;
+            orbitRing.style.height = `${distance * 2}px`;
+            orbitRing.style.setProperty('--speed', `${speed}s`);
+
+            const planet = document.createElement('div');
+            planet.className = 'planet';
+            const size = 15 + (Math.random() * 15);
+            planet.style.width = `${size}px`;
+            planet.style.height = `${size}px`;
+            planet.style.background = color;
+            planet.style.boxShadow = `0 0 15px ${color}66, inset -4px -4px 8px rgba(0,0,0,0.7)`;
+
+            orbitRing.appendChild(planet);
+            universe.appendChild(orbitRing);
+            log(`Vytvořena orbita na ${distance}px.`);
+        }
+
+        input.addEventListener('keydown', async (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const val = input.value.toLowerCase();
+                const match = availableCommands.find(c => c.startsWith(val));
+                if (match) input.value = match;
+            }
+
+            if (e.key === 'Enter') {
+                const fullCmd = input.value.trim();
+                if (fullCmd === "") return;
+                commandHistory.push(fullCmd);
+                historyIndex = commandHistory.length;
+                input.value = '';
+                
+                const cmdLower = fullCmd.toLowerCase();
+                const parts = cmdLower.split(' ');
+
+                if (cmdLower === 'add sun') {
+                    sun.style.opacity = "1";
+                    sunExists = true;
+                    await log('Hvězda inicializována ve středu sektoru.');
+                } 
+                else if (parts[0] === 'add' && parts[1] === 'planet') {
+                    if (!sunExists) {
+                        await log('Chyba: Gravitační centrum chybí.', true);
+                    } else {
+                        createPlanet(parts[2] || 'royalblue');
+                    }
+                }
+                else if (cmdLower === 'reset') {
+                    sunExists = false;
+                    sun.style.opacity = "0";
+                    occupiedOrbits = [];
+                    document.querySelectorAll('.orbit-ring').forEach(o => o.remove());
+                    await log('Všechny objekty byly de-materializovány.');
+                }
+                else if (cmdLower === 'clear') {
+                    historyDiv.innerHTML = '';
+                }
+            }
+            else if (e.key === 'ArrowUp') {
+                if (historyIndex > 0) { historyIndex--; input.value = commandHistory[historyIndex]; }
+                e.preventDefault();
+            } 
+            else if (e.key === 'ArrowDown') {
+                if (historyIndex < commandHistory.length - 1) { historyIndex++; input.value = commandHistory[historyIndex]; }
+                else { historyIndex = commandHistory.length; input.value = ""; }
+                e.preventDefault();
+            }
+        });
+
+        // Pozadí
+        for (let i = 0; i < 300; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.top = `${Math.random() * 100}%`;
+            const s = Math.random() * 2;
+            star.style.width = `${s}px`; star.style.height = `${s}px`;
+            star.style.setProperty('--duration', `${2 + Math.random() * 4}s`);
+            starField.appendChild(star);
+        }
+    </script>
+</body>
+</html>
